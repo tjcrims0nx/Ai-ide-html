@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOID — Anti-Gravity AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #020408;
+    --deep: #060d18;
+    --panel: #0a1628;
+    --glass: rgba(10, 22, 40, 0.7);
+    --rim: rgba(0, 200, 255, 0.15);
+    --rim-hot: rgba(0, 200, 255, 0.45);
+    --cyan: #00c8ff;
+    --cyan-glow: rgba(0, 200, 255, 0.6);
+    --violet: #7b3fff;
+    --violet-glow: rgba(123, 63, 255, 0.5);
+    --amber: #ffaa00;
+    --green: #00ff9d;
+    --danger: #ff3d5a;
+    --text: #c8e4f0;
+    --muted: #4a6070;
+    --white: #eef6ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* ── STAR FIELD ── */
+  #starfield {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse at 20% 30%, rgba(123,63,255,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, rgba(0,200,255,0.06) 0%, transparent 55%),
+                var(--void);
+  }
+  .star {
+    position: absolute; border-radius: 50%;
+    background: white; animation: twinkle var(--d) ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: var(--min); transform: scale(1); }
+    50% { opacity: var(--max); transform: scale(1.4); }
+  }
+
+  /* ── FLOATING ORBS ── */
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(60px);
+    pointer-events: none; z-index: 0; animation: drift var(--od) ease-in-out infinite alternate;
+  }
+  .orb-1 { width: 300px; height: 300px; background: radial-gradient(circle, var(--violet-glow), transparent); top: -80px; left: -80px; --od: 18s; }
+  .orb-2 { width: 250px; height: 250px; background: radial-gradient(circle, var(--cyan-glow), transparent); bottom: -60px; right: -60px; --od: 22s; }
+  .orb-3 { width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,170,0,0.25), transparent); top: 40%; left: 50%; --od: 14s; }
+  @keyframes drift {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, 40px) scale(1.1); }
+  }
+
+  /* ── LAYOUT ── */
+  #app {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr 260px;
+    grid-template-rows: 52px 1fr 120px;
+    width: 100vw; height: 100vh;
+    gap: 0;
+  }
+
+  /* ── GLASS PANEL BASE ── */
+  .panel {
+    background: var(--glass);
+    border: 1px solid var(--rim);
+    backdrop-filter: blur(20px) saturate(1.5);
+  }
+
+  /* ── TOPBAR ── */
+  #topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px;
+    background: rgba(6, 13, 24, 0.9);
+    border-bottom: 1px solid var(--rim);
+    backdrop-filter: blur(30px);
+  }
+  #logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 18px;
+    letter-spacing: 0.3em;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: logopulse 4s ease-in-out infinite;
+  }
+  @keyframes logopulse {
+    0%,100% { filter: drop-shadow(0 0 8px var(--cyan-glow)); }
+    50% { filter: drop-shadow(0 0 20px var(--cyan-glow)) drop-shadow(0 0 40px var(--violet-glow)); }
+  }
+  #logo-sub {
+    font-size: 9px; color: var(--muted); letter-spacing: 0.4em; margin-left: -10px; margin-top: 2px;
+  }
+  .top-nav { display: flex; gap: 4px; margin-left: 20px; }
+  .top-nav button {
+    background: transparent; border: 1px solid transparent; color: var(--muted);
+    padding: 4px 12px; font-family: 'Space Mono', monospace; font-size: 11px;
+    cursor: pointer; border-radius: 4px; transition: all 0.2s; letter-spacing: 0.05em;
+  }
+  .top-nav button:hover, .top-nav button.active {
+    color: var(--cyan); border-color: var(--rim-hot);
+    background: rgba(0,200,255,0.06);
+    text-shadow: 0 0 10px var(--cyan);
+  }
+  .top-status { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px;
+    border: 1px solid rgba(0,255,157,0.3);
+    background: rgba(0,255,157,0.05);
+    font-size: 10px; color: var(--green); letter-spacing: 0.1em;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.7);} }
+
+  /* ── LEFT SIDEBAR ── */
+  #sidebar-left {
+    grid-row: 2 / 4;
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--rim);
+    overflow: hidden;
+  }
+  .sidebar-section { padding: 14px 16px 8px; }
+  .sidebar-label {
+    font-size: 9px; letter-spacing: 0.3em; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  /* Persona Card */
+  #persona-card {
+    margin: 12px; border-radius: 12px;
+    border: 1px solid var(--rim-hot);
+    background: rgba(0,200,255,0.04);
+    padding: 14px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  #persona-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(123,63,255,0.08), rgba(0,200,255,0.05));
+  }
+  .persona-avatar {
+    width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 10px;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(0,200,255,0.2);
+    animation: avatar-glow 3s ease-in-out infinite;
+    position: relative; z-index: 1;
+  }
+  @keyframes avatar-glow {
+    0%,100% { box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(0,200,255,0.2); }
+    50% { box-shadow: 0 0 30px var(--cyan-glow), 0 0 60px var(--violet-glow); }
+  }
+  .persona-name {
+    font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--white); letter-spacing: 0.15em; position: relative; z-index: 1;
+  }
+  .persona-role {
+    font-size: 9px; color: var(--cyan); letter-spacing: 0.2em; margin-top: 3px;
+    position: relative; z-index: 1;
+  }
+
+  /* Name editor */
+  #persona-name-input {
+    background: transparent; border: none; border-bottom: 1px solid var(--rim);
+    color: var(--white); font-family: 'Orbitron', sans-serif; font-size: 13px;
+    font-weight: 700; letter-spacing: 0.15em; text-align: center;
+    width: 100%; outline: none; padding: 2px 4px;
+  }
+  #persona-name-input:focus { border-bottom-color: var(--cyan); }
+
+  /* Quick actions */
+  .quick-actions { display: flex; flex-direction: column; gap: 6px; padding: 0 12px; }
+  .qa-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--rim); background: rgba(10,22,40,0.5);
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+  }
+  .qa-btn:hover {
+    border-color: var(--rim-hot); background: rgba(0,200,255,0.07);
+    color: var(--cyan); transform: translateX(3px);
+    box-shadow: -3px 0 12px rgba(0,200,255,0.2);
+  }
+  .qa-icon { font-size: 14px; flex-shrink: 0; }
+
+  .sidebar-divider {
+    height: 1px; background: var(--rim); margin: 10px 12px;
+  }
+
+  /* ── MAIN CHAT ── */
+  #chat-area {
+    grid-column: 2; grid-row: 2;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid var(--rim);
+    border-right: 1px solid var(--rim);
+  }
+  #chat-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--rim);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(6,13,24,0.6);
+  }
+  #chat-title {
+    font-family: 'Orbitron', sans-serif; font-size: 12px;
+    color: var(--white); letter-spacing: 0.2em;
+  }
+  #chat-model { font-size: 9px; color: var(--muted); margin-left: auto; letter-spacing: 0.1em; }
+
+  #messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth;
+  }
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 2px; }
+
+  .msg {
+    display: flex; gap: 12px; max-width: 85%;
+    animation: msg-in 0.3s cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .msg.agent { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .msg.agent .msg-avatar {
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    box-shadow: 0 0 14px var(--violet-glow);
+  }
+  .msg.user .msg-avatar {
+    background: linear-gradient(135deg, #1e3a5f, #2d5986);
+    border: 1px solid var(--rim);
+  }
+
+  .msg-bubble {
+    padding: 12px 16px; border-radius: 12px; font-size: 13px; line-height: 1.7;
+  }
+  .msg.agent .msg-bubble {
+    background: rgba(10,22,40,0.8); border: 1px solid var(--rim);
+    border-radius: 4px 12px 12px 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,200,255,0.06);
+  }
+  .msg.user .msg-bubble {
+    background: linear-gradient(135deg, rgba(123,63,255,0.2), rgba(0,200,255,0.12));
+    border: 1px solid rgba(0,200,255,0.3);
+    border-radius: 12px 4px 12px 12px;
+    color: var(--white);
+  }
+  .msg-meta { font-size: 9px; color: var(--muted); margin-top: 5px; letter-spacing: 0.05em; }
+
+  /* Typing indicator */
+  .typing-indicator { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan); opacity: 0.4;
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing { 0%,100%{opacity:0.2;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
+
+  /* ── INPUT BAR ── */
+  #input-area {
+    grid-column: 2; grid-row: 3;
+    padding: 16px 20px;
+    border-top: 1px solid var(--rim);
+    border-left: 1px solid var(--rim);
+    border-right: 1px solid var(--rim);
+    background: rgba(6,13,24,0.85);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #input-row {
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  #chat-input {
+    flex: 1; background: rgba(10,22,40,0.8);
+    border: 1px solid var(--rim); border-radius: 10px;
+    color: var(--white); font-family: 'Space Mono', monospace; font-size: 13px;
+    padding: 12px 16px; outline: none; resize: none;
+    min-height: 46px; max-height: 120px; line-height: 1.5;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #chat-input::placeholder { color: var(--muted); }
+  #chat-input:focus {
+    border-color: var(--rim-hot);
+    box-shadow: 0 0 0 3px rgba(0,200,255,0.06), inset 0 1px 0 rgba(0,200,255,0.04);
+  }
+  #send-btn {
+    width: 46px; height: 46px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,200,255,0.3);
+  }
+  #send-btn:hover { transform: scale(1.08); box-shadow: 0 6px 30px rgba(0,200,255,0.5); }
+  #send-btn:active { transform: scale(0.95); }
+
+  /* Quick prompt chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 12px; border-radius: 20px; font-size: 10px;
+    border: 1px solid var(--rim); background: rgba(10,22,40,0.6);
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.05em; font-family: 'Space Mono', monospace;
+  }
+  .chip:hover {
+    border-color: var(--rim-hot); color: var(--cyan);
+    background: rgba(0,200,255,0.06);
+    box-shadow: 0 0 10px rgba(0,200,255,0.15);
+  }
+
+  /* ── RIGHT PANEL (MEMORY) ── */
+  #memory-panel {
+    grid-row: 2 / 4;
+    display: flex; flex-direction: column;
+    border-left: 1px solid var(--rim);
+    overflow: hidden;
+  }
+  #memory-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--rim);
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(6,13,24,0.6);
+  }
+  #memory-title {
+    font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--white); letter-spacing: 0.2em;
+  }
+  .memory-count {
+    margin-left: auto; background: rgba(0,200,255,0.15);
+    color: var(--cyan); font-size: 9px; padding: 2px 8px; border-radius: 10px;
+    border: 1px solid rgba(0,200,255,0.3);
+  }
+
+  #memory-list {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #memory-list::-webkit-scrollbar { width: 3px; }
+  #memory-list::-webkit-scrollbar-thumb { background: var(--rim); }
+
+  .memory-card {
+    padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--rim); background: rgba(10,22,40,0.6);
+    transition: border-color 0.2s;
+    animation: mem-in 0.4s ease;
+  }
+  @keyframes mem-in { from{opacity:0;transform:translateX(10px);} to{opacity:1;transform:none;} }
+  .memory-card:hover { border-color: var(--rim-hot); }
+  .memory-tag {
+    font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;
+  }
+  .tag-fact { background: rgba(0,200,255,0.1); color: var(--cyan); border: 1px solid rgba(0,200,255,0.2); }
+  .tag-pref { background: rgba(123,63,255,0.15); color: #a78bfa; border: 1px solid rgba(123,63,255,0.25); }
+  .tag-goal { background: rgba(255,170,0,0.1); color: var(--amber); border: 1px solid rgba(255,170,0,0.2); }
+  .tag-context { background: rgba(0,255,157,0.1); color: var(--green); border: 1px solid rgba(0,255,157,0.2); }
+  .memory-text { font-size: 11px; color: var(--text); line-height: 1.5; }
+  .memory-time { font-size: 9px; color: var(--muted); margin-top: 4px; }
+
+  /* Memory stats bar */
+  #memory-stats {
+    padding: 12px 14px; border-top: 1px solid var(--rim);
+    background: rgba(6,13,24,0.8);
+  }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .stat-label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; }
+  .stat-val { font-size: 11px; color: var(--cyan); font-family: 'Orbitron', sans-serif; }
+  .stat-bar { height: 3px; border-radius: 2px; background: var(--rim); overflow: hidden; margin-bottom: 6px; }
+  .stat-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--violet), var(--cyan)); transition: width 1s ease; }
+  #clear-mem-btn {
+    width: 100%; padding: 7px; border-radius: 6px; margin-top: 6px;
+    background: transparent; border: 1px solid rgba(255,61,90,0.3);
+    color: rgba(255,61,90,0.7); font-family: 'Space Mono', monospace; font-size: 10px;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.1em;
+  }
+  #clear-mem-btn:hover {
+    background: rgba(255,61,90,0.1); color: var(--danger); border-color: var(--danger);
+  }
+
+  /* Persona emoji picker */
+  #emoji-picker {
+    display: none; gap: 8px; flex-wrap: wrap; padding: 10px;
+    background: rgba(6,13,24,0.95); border: 1px solid var(--rim);
+    border-radius: 10px; margin: 0 12px;
+  }
+  #emoji-picker.open { display: flex; }
+  .ep-btn {
+    font-size: 20px; cursor: pointer; padding: 4px; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .ep-btn:hover { background: var(--rim); }
+
+  /* Floating particles */
+  .particle {
+    position: fixed; pointer-events: none; border-radius: 50%;
+    background: var(--cyan); opacity: 0;
+    animation: particle-rise var(--pd) ease-out forwards;
+    z-index: 0;
+  }
+  @keyframes particle-rise {
+    0% { opacity: 0.6; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.3); }
+  }
+
+  /* Code block styling */
+  .code-block {
+    background: rgba(6,13,24,0.9); border: 1px solid var(--rim);
+    border-radius: 6px; padding: 10px 14px; margin: 6px 0;
+    font-size: 11px; color: var(--green); line-height: 1.6;
+    overflow-x: auto; white-space: pre;
+  }
+
+  /* Responsive scrollbar hide for left sidebar */
+  #sidebar-left { overflow-y: auto; }
+  #sidebar-left::-webkit-scrollbar { width: 3px; }
+  #sidebar-left::-webkit-scrollbar-thumb { background: var(--rim); }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(90deg, var(--panel) 25%, rgba(0,200,255,0.05) 50%, var(--panel) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div id="starfield"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div id="app">
+
+  <!-- TOPBAR -->
+  <header id="topbar" class="panel">
+    <div>
+      <div id="logo">VOID</div>
+      <div id="logo-sub">ANTI-GRAVITY AI AGENT</div>
+    </div>
+    <nav class="top-nav">
+      <button class="active">⚡ Agent</button>
+      <button>◈ Modules</button>
+      <button>⌘ Deploy</button>
+      <button>◎ Logs</button>
+    </nav>
+    <div class="top-status">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        AGENT ONLINE
+      </div>
+      <div style="font-size:10px;color:var(--muted);">claude-sonnet-4-5</div>
+    </div>
+  </header>
+
+  <!-- LEFT SIDEBAR -->
+  <aside id="sidebar-left" class="panel">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Persona</div>
+    </div>
+
+    <div id="persona-card">
+      <div class="persona-avatar" id="agent-avatar" style="cursor:pointer" title="Click to change">🤖</div>
+      <input type="text" id="persona-name-input" value="VOID" maxlength="12" />
+      <div class="persona-role" id="persona-role-display">Anti-Gravity Intelligence</div>
+    </div>
+
+    <div id="emoji-picker">
+      <span class="ep-btn">🤖</span><span class="ep-btn">👾</span><span class="ep-btn">🛸</span>
+      <span class="ep-btn">⚡</span><span class="ep-btn">🧠</span><span class="ep-btn">🌌</span>
+      <span class="ep-btn">🔮</span><span class="ep-btn">💎</span><span class="ep-btn">🚀</span>
+      <span class="ep-btn">🌀</span><span class="ep-btn">⭐</span><span class="ep-btn">🦾</span>
+    </div>
+
+    <div style="padding: 8px 12px 4px;">
+      <div class="sidebar-label">Agent Role</div>
+      <input id="role-input" type="text" placeholder="e.g. Code Architect" value="Anti-Gravity Intelligence"
+        style="width:100%;background:rgba(10,22,40,0.7);border:1px solid var(--rim);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'Space Mono',monospace;font-size:10px;outline:none;">
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Actions</div>
+    </div>
+    <div class="quick-actions">
+      <button class="qa-btn" onclick="quickAction('Explain quantum computing in simple terms')">
+        <span class="qa-icon">⚛️</span> Quantum Brief
+      </button>
+      <button class="qa-btn" onclick="quickAction('Write a Python function that')">
+        <span class="qa-icon">🐍</span> Python Scaffold
+      </button>
+      <button class="qa-btn" onclick="quickAction('Generate 5 creative ideas for')">
+        <span class="qa-icon">💡</span> Idea Storm
+      </button>
+      <button class="qa-btn" onclick="quickAction('Debug this code and explain the issue:')">
+        <span class="qa-icon">🔍</span> Debug Mode
+      </button>
+      <button class="qa-btn" onclick="quickAction('Summarize the key concepts of')">
+        <span class="qa-icon">📡</span> Summarize
+      </button>
+      <button class="qa-btn" onclick="quickAction('Create a step-by-step plan for')">
+        <span class="qa-icon">🗺️</span> Mission Plan
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section" style="padding-top:8px;">
+      <div class="sidebar-label">Gravity Field</div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+        Intelligence floating beyond conventional limits. Conversations drift freely through knowledge space.
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CHAT -->
+  <main id="chat-area">
+    <div id="chat-header">
+      <span style="font-size:16px;" id="header-avatar">🤖</span>
+      <div id="chat-title" id="chat-agent-title">VOID — ACTIVE SESSION</div>
+      <span id="chat-model">claude-sonnet-4-5 · end-to-end encrypted</span>
+    </div>
+
+    <div id="messages">
+      <!-- Welcome message -->
+      <div class="msg agent">
+        <div class="msg-avatar">🤖</div>
+        <div>
+          <div class="msg-bubble">
+            Welcome to <strong style="color:var(--cyan);">VOID</strong> — your Anti-Gravity Intelligence.<br><br>
+            I operate beyond the pull of ordinary AI constraints. Ask me anything — code, research, creativity, planning. I remember our conversation context and learn from our exchanges.<br><br>
+            <span style="color:var(--violet);">How shall we defy gravity today?</span>
+          </div>
+          <div class="msg-meta">VOID · just now · Session initialized</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- INPUT AREA -->
+  <div id="input-area">
+    <div class="chips">
+      <span class="chip" onclick="fillChip('What can you do?')">✦ Capabilities</span>
+      <span class="chip" onclick="fillChip('Write me some code for')">⌨ Code</span>
+      <span class="chip" onclick="fillChip('Analyze and explain')">◎ Analyze</span>
+      <span class="chip" onclick="fillChip('Generate creative ideas about')">◈ Create</span>
+      <span class="chip" onclick="fillChip('Help me plan')">⚡ Plan</span>
+      <span class="chip" onclick="fillChip('Research the topic of')">🔭 Research</span>
+    </div>
+    <div id="input-row">
+      <textarea id="chat-input" placeholder="Transmit your query into the void..." rows="1"></textarea>
+      <button id="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- RIGHT MEMORY PANEL -->
+  <aside id="memory-panel" class="panel">
+    <div id="memory-header">
+      <span style="font-size:13px;">🧠</span>
+      <div id="memory-title">MEMORY CORE</div>
+      <div class="memory-count" id="mem-count">0 nodes</div>
+    </div>
+    <div id="memory-list">
+      <div style="text-align:center;padding:30px 10px;color:var(--muted);font-size:11px;line-height:1.8;">
+        ◎<br>Memory nodes will<br>crystallize as you chat.<br>
+        <span style="color:var(--cyan);font-size:9px;">Context persists across turns</span>
+      </div>
+    </div>
+    <div id="memory-stats">
+      <div class="stat-row">
+        <span class="stat-label">CONTEXT USED</span>
+        <span class="stat-val" id="ctx-val">0%</span>
+      </div>
+      <div class="stat-bar"><div class="stat-fill" id="ctx-bar" style="width:0%"></div></div>
+      <div class="stat-row">
+        <span class="stat-label">SESSION MSGS</span>
+        <span class="stat-val" id="msg-count-val">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">MEMORY NODES</span>
+        <span class="stat-val" id="node-count-val">0</span>
+      </div>
+      <button id="clear-mem-btn" onclick="clearMemory()">⊘ CLEAR MEMORY</button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ── STARS ──
+const sf = document.getElementById('starfield');
+for(let i=0;i<120;i++){
+  const s=document.createElement('div');
+  s.className='star';
+  const sz=Math.random()*2+0.5;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*5}s;--min:${0.1+Math.random()*0.3};--max:${0.6+Math.random()*0.4};animation-delay:${Math.random()*5}s`;
+  sf.appendChild(s);
+}
+
+// ── STATE ──
+let conversationHistory = [];
+let memories = [];
+let messageCount = 0;
+let agentName = 'VOID';
+let agentEmoji = '🤖';
+let agentRole = 'Anti-Gravity Intelligence';
+let isThinking = false;
+
+// ── PERSONA CUSTOMIZATION ──
+document.getElementById('persona-name-input').addEventListener('input', function() {
+  agentName = this.value || 'VOID';
+  updateAgentDisplay();
+});
+document.getElementById('role-input').addEventListener('input', function() {
+  agentRole = this.value || 'Anti-Gravity Intelligence';
+  document.getElementById('persona-role-display').textContent = agentRole;
+});
+document.getElementById('agent-avatar').addEventListener('click', () => {
+  document.getElementById('emoji-picker').classList.toggle('open');
+});
+document.querySelectorAll('.ep-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    agentEmoji = btn.textContent;
+    document.getElementById('agent-avatar').textContent = agentEmoji;
+    document.getElementById('header-avatar').textContent = agentEmoji;
+    document.querySelectorAll('.msg.agent .msg-avatar').forEach(a => a.textContent = agentEmoji);
+    document.getElementById('emoji-picker').classList.remove('open');
+  });
+});
+
+function updateAgentDisplay() {
+  document.getElementById('chat-title').textContent = `${agentName} — ACTIVE SESSION`;
+}
+
+// ── PARTICLES ──
+function spawnParticles(x, y) {
+  for(let i=0;i<6;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const sz=2+Math.random()*4;
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${x+Math.random()*40-20}px;top:${y}px;--pd:${0.6+Math.random()*0.8}s;animation-delay:${Math.random()*0.2}s`;
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1500);
+  }
+}
+
+// ── MEMORY EXTRACTION ──
+function extractMemory(userMsg, agentReply) {
+  const now = new Date().toLocaleTimeString();
+  const lower = userMsg.toLowerCase();
+
+  const types = [
+    { tag: 'goal', color: 'tag-goal', pattern: /\b(want|need|trying|goal|plan|build|create|make)\b/ },
+    { tag: 'pref', color: 'tag-pref', pattern: /\b(like|prefer|love|enjoy|hate|dislike|always|never)\b/ },
+    { tag: 'fact', color: 'tag-fact', pattern: /\b(is|are|was|were|have|has|my|i am|i'm)\b/ },
+    { tag: 'context', color: 'tag-context', pattern: /.*/ }
+  ];
+
+  let type = types[3];
+  for(const t of types.slice(0,-1)) {
+    if(t.pattern.test(lower)) { type = t; break; }
+  }
+
+  const snippet = userMsg.length > 60 ? userMsg.substring(0, 57) + '…' : userMsg;
+  addMemory(snippet, type.tag, type.color, now);
+}
+
+function addMemory(text, tag, colorClass, time) {
+  memories.push({ text, tag, colorClass, time });
+  renderMemories();
+}
+
+function renderMemories() {
+  const list = document.getElementById('memory-list');
+  if(memories.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--muted);font-size:11px;line-height:1.8;">◎<br>Memory nodes will<br>crystallize as you chat.<br><span style="color:var(--cyan);font-size:9px;">Context persists across turns</span></div>`;
+    return;
+  }
+  list.innerHTML = memories.slice(-12).reverse().map(m => `
+    <div class="memory-card">
+      <span class="memory-tag ${m.colorClass}">${m.tag}</span>
+      <div class="memory-text">${m.text}</div>
+      <div class="memory-time">↑ ${m.time}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('mem-count').textContent = `${memories.length} node${memories.length!==1?'s':''}`;
+  document.getElementById('node-count-val').textContent = memories.length;
+
+  const pct = Math.min(100, Math.round((conversationHistory.length / 40) * 100));
+  document.getElementById('ctx-val').textContent = pct + '%';
+  document.getElementById('ctx-bar').style.width = pct + '%';
+}
+
+function clearMemory() {
+  memories = [];
+  conversationHistory = [];
+  messageCount = 0;
+  document.getElementById('msg-count-val').textContent = '0';
+  document.getElementById('node-count-val').textContent = '0';
+  document.getElementById('ctx-val').textContent = '0%';
+  document.getElementById('ctx-bar').style.width = '0%';
+  renderMemories();
+}
+
+// ── CHAT ──
+function getTime() {
+  return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+function appendMessage(role, content, time) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const isAgent = role === 'agent';
+  div.innerHTML = `
+    <div class="msg-avatar">${isAgent ? agentEmoji : '👤'}</div>
+    <div>
+      <div class="msg-bubble">${content}</div>
+      <div class="msg-meta">${isAgent ? agentName : 'You'} · ${time}</div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg agent';
+  div.id = 'typing-msg';
+  div.innerHTML = `
+    <div class="msg-avatar">${agentEmoji}</div>
+    <div>
+      <div class="msg-bubble">
+        <div class="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-msg');
+  if(t) t.remove();
+}
+
+async function sendMessage() {
+  if(isThinking) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  isThinking = true;
+
+  messageCount++;
+  document.getElementById('msg-count-val').textContent = messageCount;
+
+  const time = getTime();
+  appendMessage('user', text, time);
+
+  // Spawn particles from send button
+  const btn = document.getElementById('send-btn');
+  const r = btn.getBoundingClientRect();
+  spawnParticles(r.left, r.top);
+
+  conversationHistory.push({ role: 'user', content: text });
+
+  showTyping();
+
+  // Build system prompt with persona
+  const systemPrompt = `You are ${agentName}, an AI agent with the role: "${agentRole}". You have a futuristic, confident personality. You are the "Anti-Gravity Intelligence" — operating beyond conventional AI limits with a sleek, cosmic, futuristic tone. Keep responses helpful but with personality. Use short markdown-style formatting. Never break character.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    const reply = data.content?.[0]?.text || 'Signal lost in the void. Please try again.';
+
+    // Format code blocks
+    const formatted = reply
+      .replace(/```(\w*)\n([\s\S]*?)```/g, '<div class="code-block">$2</div>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--cyan)">$1</strong>')
+      .replace(/\n/g, '<br>');
+
+    appendMessage('agent', formatted, getTime());
+    conversationHistory.push({ role: 'assistant', content: reply });
+
+    extractMemory(text, reply);
+
+  } catch(e) {
+    removeTyping();
+    appendMessage('agent', `⚠ <span style="color:var(--danger)">Gravity disruption detected.</span> Signal could not be transmitted. Please check your connection and try again.`, getTime());
+  }
+
+  isThinking = false;
+}
+
+function quickAction(prompt) {
+  document.getElementById('chat-input').value = prompt + ' ';
+  document.getElementById('chat-input').focus();
+}
+
+function fillChip(text) {
+  document.getElementById('chat-input').value = text + ' ';
+  document.getElementById('chat-input').focus();
+}
+
+// ── AUTO-RESIZE TEXTAREA ──
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ── ENTER TO SEND ──
+document.getElementById('chat-input').addEventListener('keydown', function(e) {
+  if(e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ── TOP NAV ──
+document.querySelectorAll('.top-nav button').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.top-nav button').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ── INIT ──
+renderMemories();
+</script>
+</body>
+</html>
